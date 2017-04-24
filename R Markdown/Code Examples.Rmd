@@ -1,0 +1,280 @@
+---
+title: "Code Examples"
+author: "Kevin E. D'Elia"
+date: "May 27, 2015"
+output: 
+  html_document: 
+    theme: journal
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+summary(cars)
+```
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+setwd("./data"), setwd("../")
+
+if (!file.exists("data")) {
+    dir.create("data")
+}
+
+fileUrl <- "https://data.baltimorecity.gov/api/views/dz54-2aru/rows.csv?accessType=DOWNLOAD"
+download.file(fileUrl, destfile = "./data/cameras.csv", method = "curl")
+list.files("./data")
+
+dateDownloaded <- date()
+dateDownloaded
+
+library(XML)
+fileUrl <- "http://www.w3schools.com/xml/simple.xml"
+doc <- xmlTreeParse(fileUrl,useInternal=TRUE)
+rootNode <- xmlRoot(doc)
+xmlName(rootNode)
+names(rootNode)
+
+rootNode[[1]]
+
+rootNode[[1]][[1]]
+
+xmlSApply(rootNode,xmlValue)
+
+/node Top level node
+//node Node at any level
+node[@attr-name] Node with an attribute name
+node[@attr-name='bob'] Node with attribute name attr-name='bob'
+
+xpathSApply(rootNode,"//name",xmlValue)
+
+xpathSApply(rootNode,"//price",xmlValue)
+
+fileUrl <- "http://espn.go.com/nfl/team/_/name/bal/baltimore-ravens"
+doc <- htmlTreeParse(fileUrl,useInternal=TRUE)
+scores <- xpathSApply(doc,"//li[@class='score']",xmlValue)
+teams <- xpathSApply(doc,"//li[@class='team-name']",xmlValue)
+scores
+
+teams
+
+library(jsonlite)
+jsonData <- fromJSON("https://api.github.com/users/jtleek/repos")
+names(jsonData)
+
+names(jsonData$owner)
+jsonData$owner$login
+
+
+myjson <- toJSON(iris, pretty=TRUE)
+cat(myjson)
+
+iris2 <- fromJSON(myjson)
+head(iris2)
+
+Unlike data.frames, columns of character type are never converted to factors by default.
+data.table doesn’t set or use row names, ever.
+
+DT[i, j, by]
+The way to read it (out loud) is:
+Take DT, subset rows using i, then calculate j, grouped by by.
+
+Within the frame of a data.table, columns can be referred to as if they are variables. Therefore, we simply refer to dest and month as if they are variables. We do not need to add the prefix flights$ each time. However using flights$dest and flights$month would work just fine.
+A comma after the condition is also not required in i. But flights[dest == "JFK" & month == 6L, ] would work just fine. In data.frames however, the comma is necessary.
+ans <- flights[order(origin, -dest)]  # sort by origin asc, dest desc
+
+– Select arr_delay column, but return it as a vector.
+
+ans <- flights[, arr_delay]
+head(ans)
+# [1]  13  13   9 -26   1   0
+Since columns can be referred to as if they are variables within the frame of data.tables, we directly refer to the variable we want to subset. Since we want all the rows, we simply skip i.
+It returns all the rows for the column arr_delay.
+
+– Select arr_delay column, but return as a data.table instead.
+
+ans <- flights[, list(arr_delay)]
+head(ans)
+
+We wrap the variables (column names) within list(), which ensures that a data.table is returned. In case of a single column name, not wrapping with list() returns a vector instead, as seen in the previous example.
+data.table also allows using .() to wrap columns with. It is an alias to list(); they both mean the same. Feel free to use whichever you prefer.
+
+– Select both arr_delay and dep_delay columns.
+
+ans <- flights[, .(arr_delay, dep_delay)]
+
+f) Subset in i and do in j
+– Calculate the average arrival and departure delay for all flights with “JFK” as the origin airport in the month of June.
+
+ans <- flights[origin == "JFK" & month == 6L, 
+               .(m_arr=mean(arr_delay), m_dep=mean(dep_delay))]
+ans
+#       m_arr    m_dep
+# 1: 5.839349 9.807884
+We first subset in i to find matching row indices where origin airport equals “JFK”, and month equals 6. At this point, we do not subset the entire data.table corresponding to those rows.
+Now, we look at j and find that it uses only two columns. And what we have to do is to compute their mean(). Therefore we subset just those columns corresponding to the matching rows, and compute their mean().
+
+– How many trips have been made in 2014 from “JFK” airport in the month of June?
+
+ans <- flights[origin == "JFK" & month == 6L, length(dest)]
+
+This type of operation occurs quite frequently, especially while grouping as we will see in the next section, that data.table provides a special symbol .N for it.
+
+Special symbol .N:
+.N is a special in-built variable that holds the number of observations in the current group. It is particularly useful when combined with by as we’ll see in the next section. In the absence of group by operations, it simply returns the number of rows in the subset.
+So we can now accomplish the same task by using .N as follows:
+
+ans <- flights[origin == "JFK" & month == 6L, .N]
+
+We could have accomplished the same operation by doing nrow(flights[origin == "JFK" & month == 6L]). However, it would have to subset the entire data.table first corresponding to the row indices in i and then return the rows using nrow(), which is unnecessary and inefficient.
+
+You can refer to column names the data.frame way using with = FALSE.
+
+– Select both arr_delay and dep_delay columns the data.frame way.
+
+ans <- flights[, c("arr_delay", "dep_delay"), with=FALSE]
+
+## (1) normal way
+DF[DF$x > 1, ] # data.frame needs that ',' as well
+
+## (2) using with
+DF[with(DF, x > 1), ]
+
+Using with() in (2) allows using DF’s column x as if it were a variable.
+
+Hence the argument name with in data.table. Setting with=FALSE disables the ability to refer to columns as if they are variables, thereby restoring the “data.frame mode”.
+with = TRUE is default in data.table because we can do much more by allowing j to handle expressions - especially when combined with by as we’ll see in a moment.
+
+If we use the default in 
+
+ans <- flights[, c("arr_delay", "dep_delay"), ]
+
+we get:
+ans
+[1] "arr_delay" "dep_delay"
+
+– How can we get the number of trips corresponding to each origin airport?
+ans <- flights[, .(.N), by=.(origin)]
+ans <- flights[, .(.N), by="origin"]
+ans <- flights[, .N, by=origin] <- preferred way!!!
+
+– How can we calculate the number of trips for each origin airport for carrier code “AA”?
+
+The unique carrier code “AA” corresponds to American Airlines Inc.
+
+ans <- flights[carrier == "AA", .N, by=origin]
+
+– How can we get the total number of trips for each origin, dest pair for carrier code “AA”?
+ans <- flights[carrier == "AA", .N, by=.(origin,dest)]
+ans <- flights[carrier == "AA", .N, by=c("origin", "dest")]
+
+– How can we get the average arrival and departure delay for each orig,dest pair for each month for carrier code “AA”?
+
+ans <- flights[carrier == "AA", 
+        .(mean(arr_delay), mean(dep_delay)), 
+        by=.(origin, dest, month)]
+        
+– So how can we directly order by all the grouping variables?
+
+ans <- flights[carrier == "AA", 
+        .(mean(arr_delay), mean(dep_delay)), 
+        keyby=.(origin, dest, month)]
+        
+– How can we order ans using the columns origin in ascending order, and dest in descending order?
+ans <- ans[order(origin, -dest)]
+
+But this requires having to assign the intermediate result and then overwriting that result. We can do one better and avoid this intermediate assignment on to a variable altogther by chaining expressions.
+
+ans <- flights[carrier == "AA", .N, by=.(origin, dest)][order(origin, -dest)]
+
+– Can by accept expressions as well or just take columns?
+
+Yes it does. As an example, if we would like to find out how many flights started late but arrived early (or on time), started and arrived late etc…
+
+ans <- flights[, .N, .(dep_delay>0, arr_delay>0)]
+ans
+#    dep_delay arr_delay      N
+# 1:      TRUE      TRUE  72836
+# 2:     FALSE      TRUE  34583
+# 3:     FALSE     FALSE 119304
+# 4:      TRUE     FALSE  26593
+The last row corresponds to dep_delay > 0 = TRUE and arr_delay > 0 = FALSE. We can see that 26593 flights started late but arrived early (or on time).
+Note that we did not provide any names to by-expression. And names have been automatically assigned in the result.
+You can provide other columns along with expressions, for example: DT[, .N, by=.(a, b>0)].
+
+Tip:
+As long as j-expression returns a list, each element of the list will be converted to a column in the resulting data.table. This makes j quite powerful, as we will see shortly.
+
+Special symbol .SD:
+data.table provides a special symbol, called .SD. It stands for Subset of Data. It by itself is a data.table that holds the data for the current group defined using by.
+
+Recall that a data.table is internally a list as well with all its columns of equal length.
+ 
+DT = data.table(ID = c("b","b","b","a","a","c"), a = 1:6, b = 7:12, c=13:18)
+
+DT[, print(.SD), by=ID]
+
+.SD contains all the columns except the grouping columns by default.
+It is also generated by preserving the original order - data corresponding to ID = "b", then ID = "a", and then ID = "c".
+
+To compute on (multiple) columns, we can then simply use the base R function lapply().
+
+DT[, lapply(.SD, mean), by=ID]
+
+.SD holds the rows corresponding to columns a, b and c for that group. We compute the mean() on each of these columns using the already familiar base function lapply().
+Each group returns a list of three elements containing the mean value which will become the columns of the resulting data.table.
+Since lapply() returns a list, there is no need to wrap it with an additional .() (if necessary, refer to this tip).
+
+– How can we specify just the columns we would like to compute the mean() on?
+
+.SDcols
+Using the argument .SDcols. It accepts either column names or column indices. For example, .SDcols = c("arr_delay", "dep_delay") ensures that .SD contains only these two columns for each group.
+
+You can also provide the columns to remove instead of columns to keep using - sign.
+
+flights[carrier == "AA",                     ## Only on trips with carrier "AA"
+        lapply(.SD, mean),                   ## compute the mean
+        by=.(origin, dest, month),           ## for every 'origin,dest,month'
+        .SDcols=c("arr_delay", "dep_delay")] ## for just those specified in .SDcols
+        
+– How can we return the first two rows for each month?
+
+ans <- flights[, head(.SD, 2), by=month]
+
+.SD is a data.table that holds all the rows for that group. We simply subset the first two rows as we have seen here already.
+For each group, head(.SD, 2) returns the first two rows as a data.table which is also a list. So we do not have to wrap it with .().
+
+– How can we concatenate columns a and b for each group in ID?
+
+DT[, .(val = c(a,b)), by=ID]
+
+This example also shows how you can provide a name for the column associated with the result of "j"
+
+– What if we would like to have all the values of column a and b concatenated, but returned as a list column?
+
+DT[, .(val = list(c(a,b))), by=ID]
+
+
+- How to figure out the classes for columns when reading in data
+use colClasses argument
+read some lines: initial<-read.table("file.txt", nrows=100)
+find class: classes<-sapply(initial,class)
+set colClasses value: tabAll<-read.table("file.txt", colClasses=classes)
+
+
+- What to put in the top of your files
+library(some package)
+library(some other package)
+source("R/functions.R")
+source("R/utilities.R")
+# The code which follows loads the data, cleans it up, runs the analysis, and generates figures
+# There is an R directory, a data directory (R/O - chmod?), a doc, a figs, and an output
